@@ -23,3 +23,13 @@ jobs:
       - run:
           name: "run tests"
           command: "npm test"
+
+workflows:
+  version: 2
+  workflow:
+    jobs:
+      - test:
+          filters:
+            branches:
+              only:
+                - develop
