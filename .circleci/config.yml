@@ -2,7 +2,7 @@ version: 2.1
 executors:
   docker-publisher:
     environment:
-      IMAGE_NAME: assetory/landingpage
+      IMAGE_NAME: assetory/$SERVICE_NAME
     docker:
       - image: circleci/node:12
 
