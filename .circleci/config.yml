@@ -23,7 +23,7 @@ jobs:
       - run:
           name: "run tests"
           command: "npm test"
-          
+
   build-develop:
     executor: docker-publisher
     steps:
@@ -57,17 +57,7 @@ jobs:
           root: .
           paths:
             - ./image.tar
-            
-  deploy-develop:
-    executor: docker-publisher
-    steps:
 
-      # deploy image to digitalocean...
-      - run: 
-          command: |
-            ssh -oStrictHostKeyChecking=no -v root@$IP \
-            echo "deployable"
-            
   build-latest:
     executor: docker-publisher
     steps:
@@ -85,6 +75,7 @@ jobs:
           command: |
             docker build \
             --build-arg SERVICE_NAME_ARG=$SERVICE_NAME \
+            --build-arg HEALTHCHECK_ID_ARG=$HEALTHCHECK_PRODUCTION \
             -t $IMAGE_NAME:latest . 
       
       # Archive Docker image
@@ -96,17 +87,65 @@ jobs:
           paths:
             - ./image.tar
 
+
+  publish-develop:
+    executor: docker-publisher
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - setup_remote_docker
+
+      # Load archived Docker image
+      - run:
+          name: Load archived Docker image
+          command: docker load -i /tmp/workspace/image.tar
+      
+      # Publish Image to DockerHub
+      - run:
+          name: Publish Image to DockerHub
+          command: |
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            docker push $IMAGE_NAME:develop
+
+  publish-latest:
+    executor: docker-publisher
+    steps:
+      - attach_workspace:
+          at: /tmp/workspace
+      - setup_remote_docker
+
+      # Load archived Docker image
+      - run:
+          name: Load archived Docker image
+          command: docker load -i /tmp/workspace/image.tar
+      
+      # Publish Image to DockerHub
+      - run:
+          name: Publish Image to DockerHub
+          command: |
+            echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+            docker push $IMAGE_NAME:latest
+
+  deploy-develop:
+    executor: docker-publisher
+    steps:
+
+      # deploy image to digitalocean...
+      - run: 
+          command: |
+            ssh -oStrictHostKeyChecking=no -v root@$IP \
+            echo "deployable"
+
+
 workflows:
   version: 2
   workflow:
     jobs:
-      # Run Tests
       - test:
           filters:
             branches:
               only:
                 - develop
-      # Build develop Image
       - build-develop:
           requires:
             - test
@@ -114,15 +153,23 @@ workflows:
             branches:
               only:
                 - develop
-
+      - publish-develop:
+          context: dockerhub
+          requires:
+            - build-develop
       - deploy-develop:
           context: digitalocean-develop
           requires:
             - publish-develop
 
-      # Build latest image
       - build-latest:
           filters:
             branches:
               only:
                 - master
+      - publish-latest:
+          context: dockerhub
+          requires:
+            - build-latest
+
+  
