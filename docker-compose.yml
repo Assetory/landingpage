@@ -1,0 +1,102 @@
+version: '2'
+
+volumes:
+    postgres_data:
+        driver: local
+
+services:
+
+    redis_logger:
+        image: redis
+        container_name: redis_logger
+        ports:
+            - "6379:6379"
+        networks:
+            - gateway
+
+    redis_pubsub:
+        image: redis
+        container_name: redis_pubsub
+        command: --port 6380
+        ports:
+            - "6380:6380"
+        networks:
+            - gateway
+
+    redis_gateway:
+        image: redis
+        container_name: redis_gateway
+        command: --port 6381
+        ports:
+            - "6381:6381"
+        networks:
+            gateway:
+                aliases:
+                    - redis
+
+    postgres:
+        image: postgres
+        container_name: keycloak_database
+        volumes:
+            - postgres_data:/var/lib/postgresql/data
+        environment:
+            POSTGRES_DB: keycloak
+            POSTGRES_USER: keycloak
+            POSTGRES_PASSWORD: password
+        networks:
+            - gateway
+    
+    auth:
+        image: quay.io/keycloak/keycloak:latest
+        command: ["-Djboss.socket.binding.port-offset=10"]
+        container_name: auth
+        environment:
+            DB_VENDOR: POSTGRES
+            DB_ADDR: postgres
+            DB_DATABASE: keycloak
+            DB_USER: keycloak
+            DB_SCHEMA: public
+            DB_PASSWORD: password
+            KEYCLOAK_FRONTEND_URL: ${KEYCLOAK_FRONTEND}
+            KEYCLOAK_USER: ${KEYCLOAK_USER}
+            KEYCLOAK_PASSWORD: ${KEYCLOAK_PASSWORD}
+            #JDBC_PARAMS: "ssl=true"
+        ports:
+            - 8090:8090
+        depends_on:
+            - postgres
+        networks:
+            - gateway
+
+    gateway:
+        build: .
+        container_name: gateway
+        ports:
+            - "8080:8080"
+            - "80:80"
+            - "8443:8443"
+            - "9876:9876"
+        volumes:
+            - ./gateway/config/system.config.yml:/usr/src/app/config/system.config.yml
+            - ./gateway/config/gateway.config.yml:/usr/src/app/config/gateway.config.yml
+        restart: always
+        depends_on:
+            - auth
+        networks:
+            - gateway
+
+    landingpage:
+        container_name: landingpage
+        build: ./
+        restart: always
+        image: assetory/landingpage:develop
+        ports: 
+            - "3000:3000"
+        depends_on:
+            - auth
+            - gateway
+        networks:
+            - gateway
+
+networks:
+    gateway:
