@@ -134,7 +134,7 @@ jobs:
       - run: 
           command: |
             ssh -oStrictHostKeyChecking=no -v root@$IP \
-            "docker-compose pull && docker-compose up"
+            "cd /gateway/ && docker-compose pull && docker-compose up"
             echo "deployable"
 
 
