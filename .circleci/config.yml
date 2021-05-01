@@ -58,6 +58,16 @@ jobs:
           paths:
             - ./image.tar
             
+  deploy-develop:
+    executor: docker-publisher
+    steps:
+
+      # deploy image to digitalocean...
+      - run: 
+          command: |
+            ssh -oStrictHostKeyChecking=no -v root@$IP \
+            echo "deployable"
+            
   build-latest:
     executor: docker-publisher
     steps:
@@ -104,6 +114,11 @@ workflows:
             branches:
               only:
                 - develop
+
+      - deploy-develop:
+          context: digitalocean-develop
+          requires:
+            - publish-develop
 
       # Build latest image
       - build-latest:
