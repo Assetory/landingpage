@@ -87,5 +87,16 @@ services:
         networks:
             - gateway
 
+    dashboard:
+        container_name: dashboard
+        restart: always
+        image: assetory/dashboard:develop
+        ports: 
+            - "3005:3005"
+        depends_on:
+            - gateway
+        networks:
+            - gateway
+
 networks:
     gateway:
