@@ -11,13 +11,13 @@ class HelloMessage extends React.Component
                     <a href="/ip">Link to ip test</a>
                 </li>
                 <li>
-                    <a href="/dashboard">Link to dashboard</a>
+                    <a href="/dashboard/">Link to dashboard</a>
                 </li>
             </div>
         );
     }
 }
 
-var mountNode = document.getElementById("app");
+const mountNode = document.getElementById('app');
 ReactDOM.render(<HelloMessage />, mountNode);
 
